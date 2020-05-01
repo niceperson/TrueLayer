@@ -1,0 +1,21 @@
+{
+    "name": "niceperson/truelayer",
+    "type": "library",
+    "require": {
+        "php": ">=7.0.0",
+        "guzzlehttp/guzzle": "^7.0@dev"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "niceperson",
+            "email": "niceperson404@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "Niceperson\\Truelayer\\": "src/"
+        }
+    }
+}
