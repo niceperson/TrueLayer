@@ -12,7 +12,7 @@ class Token
     protected $token_type;
     protected $refresh_token;
     protected $scope;
-    protected $created_at;
+    protected $issued_at;
 
     public function __construct(array $token)
     {
@@ -21,7 +21,7 @@ class Token
         $this->token_type = $token['token_type'];
         $this->refresh_token = $token['refresh_token'];
         $this->scope = $token['scope'];
-        $this->created_at = ( isset($token['created_at']) ) ? new DateTime($token['created_at']) : new DateTime();
+        $this->issued_at = ( isset($token['issued_at']) ) ? new DateTime($token['issued_at']) : new DateTime();
     }
 
 
@@ -38,9 +38,21 @@ class Token
     public function isExpired() : bool
     {
         $interval = new DateInterval("PT" . $this->expires_in . "S");
-        $expires = (clone $this->created_at)->add($interval);
+        $expires = (clone $this->issued_at)->add($interval);
 
         return $expires < (new DateTime);
+    }
+
+    public function getDBField() : array
+    {
+        return [
+            'access_token' => $this->access_token,
+            'refresh_token' => $this->refresh_token,
+            'expires_in' => $this->expires_in,
+            'issued_at' => $this->issued_at,
+            'token_type' => $this->token_type,
+            'scope' => $this->scope,
+        ];
     }
 
 }

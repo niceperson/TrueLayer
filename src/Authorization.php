@@ -3,11 +3,12 @@
 namespace Niceperson\Truelayer;
 
 use Exception;
+use Niceperson\Truelayer\Token;
 
 class Authorization
 {
-    private $request;
-    private $credentials;
+    protected $request;
+    protected $credentials;
 
     public function __construct(Request $request, Credentials $credentials)
     {
@@ -15,7 +16,7 @@ class Authorization
         $this->credentials = $credentials;
     }
 
-    public function getAccessToken($code) : array
+    public function getAccessToken(string $code)
     {
         $grant = 'authorization_code';
         $method = 'POST';
@@ -36,21 +37,21 @@ class Authorization
             ]
         );
 
-        if ( $result instanceof Exception ) {
-            throw $result;
-            throw new Exception("Sorry, we could not fetch a token from that code.");
+        if ($result['error']) {
+            throw new Exception('Ooopps! we could not fetch token from the code');
         }
 
-        return $result['body'];
+        return new Token($result['body']);
+
     }
 
-    public function refreshAccessToken($refresh_token) : array
+    public function refreshAccessToken(string $refresh_token) : Token
     {
         $grant = 'refresh_token';
         $method = 'POST';
         $endpoint = '/connect/token';
 
-        $result = $this->request->makeRequest(
+        $result =  $this->request->makeRequest(
             $endpoint,
             $method,
             [
@@ -64,10 +65,27 @@ class Authorization
             ]
         );
 
-        if ( $result instanceof Exception ) {
-            throw new Exception("Sorry, we could not fetch a token from that code.");
+        if ($result['error']) {
+            throw new Exception('Ooopps! we could not fetch token from the code');
         }
 
-        return $result['body'];
+        return new Token($result['body']);
+
+    }
+
+    public function revokeAccessToken($access_token) : Token
+    {
+        $method = 'DELETE';
+        $endpoint = '/api/delete';
+
+        return $this->request->makeRequest($endpoint, $method);
+    }
+
+    public function providers() : array
+    {
+        $method = 'GET';
+        $endpoint = '/api/providers';
+
+        return $this->request->makeRequest($endpoint, $method);
     }
 }
