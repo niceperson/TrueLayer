@@ -16,7 +16,7 @@ class Authorization
         $this->credentials = $credentials;
     }
 
-    public function getAccessToken(string $code)
+    public function getAccessToken(string $code) : Token
     {
         $grant = 'authorization_code';
         $method = 'POST';
@@ -73,12 +73,18 @@ class Authorization
 
     }
 
-    public function revokeAccessToken($access_token) : Token
+    public function revokeAccessToken(string $access_token) : array
     {
         $method = 'DELETE';
         $endpoint = '/api/delete';
 
-        return $this->request->makeRequest($endpoint, $method);
+        return $this->request->makeRequest(
+            $endpoint,
+            $method,
+            [
+                'headers' => ['Authorization' => sprintf('Bearer %s', $access_token)]
+            ]
+        );
     }
 
     public function providers() : array
