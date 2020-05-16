@@ -9,20 +9,42 @@ class Authorization
 {
     protected $request;
     protected $credentials;
+    protected $domain;
 
-    public function __construct(Request $request, Credentials $credentials)
+    public function __construct(Request $request, Credentials $credentials, bool $sandbox = false)
     {
+        $this->domain = $sandbox ? 'https://auth.truelayer-sandbox.com' : 'https://auth.truelayer.com';
         $this->request = $request;
         $this->credentials = $credentials;
     }
 
+    public function getAuthLink(string $format = '') : string
+    {
+        if (empty($format)) {
+            $format = "%s/?response_type=code&client_id=%s&scope=%s&redirect_uri=%s&response_mode=form_post&providers=%s";
+        }
+
+        $auth_link = sprintf(
+            $format,
+            $this->domain,
+            $this->credentials->getClientId(),
+            $this->credentials->getScope(),
+            $this->credentials->getRedirectUri(),
+            $this->credentials->getProviders()
+        );
+
+        return $auth_link;
+    }
+
     public function getAccessToken(string $code) : Token
     {
+        $base = $this->domain;
         $grant = 'authorization_code';
         $method = 'POST';
         $endpoint = '/connect/token';
 
         $result = $this->request->makeRequest(
+            $base,
             $endpoint,
             $method,
             [
@@ -47,11 +69,13 @@ class Authorization
 
     public function refreshAccessToken(string $refresh_token) : Token
     {
+        $base = $this->domain;
         $grant = 'refresh_token';
         $method = 'POST';
         $endpoint = '/connect/token';
 
         $result =  $this->request->makeRequest(
+            $base,
             $endpoint,
             $method,
             [
@@ -75,10 +99,12 @@ class Authorization
 
     public function revokeAccessToken(string $access_token) : array
     {
+        $base = $this->domain;
         $method = 'DELETE';
         $endpoint = '/api/delete';
 
         return $this->request->makeRequest(
+            $base,
             $endpoint,
             $method,
             [
@@ -89,9 +115,10 @@ class Authorization
 
     public function providers() : array
     {
+        $base = $this->domain;
         $method = 'GET';
         $endpoint = '/api/providers';
 
-        return $this->request->makeRequest($endpoint, $method);
+        return $this->request->makeRequest($base, $endpoint, $method);
     }
 }

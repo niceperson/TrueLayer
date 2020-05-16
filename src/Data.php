@@ -12,9 +12,11 @@ class Data
     private $request;
     private $token;
     private $actions;
+    private $domain;
 
-    public function __construct(Request $request, Token $token)
+    public function __construct(Request $request, Token $token, bool $sandbox = false)
     {
+        $this->domain = $sandbox ? 'https://api.truelayer-sandbox.com' : 'https://api.truelayer.com';
         $this->request = $request;
         $this->token = $token->getAccessToken();
         $this->actions = [
@@ -44,21 +46,13 @@ class Data
     }
 
     // Helper function
-    private function getJsonHeader() : array
-    {
-        return [
-            'Content-Type' => 'application/json'
-        ];
-    }
-
-    // Helper function
     private function getEndpoint(string $action, $options) : string
     {
 
         if (empty($options)) {
             $endpoint = $this->actions[$action];
         } elseif (sizeof($options) === 3 ) {
-            // both from and to must present else range willl be omitted
+            // both from and to must present else range will be omitted
             $endpoint = sprintf($this->actions[$action] . '?from=$s&to=$s', ...$options);
         } else {
             // only supply the account_id
@@ -71,13 +65,14 @@ class Data
     // Perfrom request
     public function fetch(string $action, ...$options) : array
     {
+        $base = $this->domain;
         $method = 'GET';
         $endpoint = $this->getEndpoint($action, $options);
         $data = [
             'headers' => $this->getAuthHeader()
         ];
 
-        $result = $this->request->makeRequest($endpoint, $method, $data);
+        $result = $this->request->makeRequest($base, $endpoint, $method, $data);
 
         if ($result['error']) {
             throw new Exception($result['message']);
