@@ -52,4 +52,12 @@ $result = $data->fetch('ACCT_TRANSACTIONS_PENDING', $account_id);
 $result = $data->fetch('CARD_TRANSACTIONS_PENDING', $account_id);
 $result = $data->fetch('ACCT_DIRECT_DEBITS', $account_id);
 $result = $data->fetch('ACCT_STANDING_ORDER', $account_id);
+
+//------------------------------------------------------------| Payment requests
+
+
+/*          PAYMENT is NOT Completed yet. will be done in next release        */
+
 ```
+
+
