@@ -29,7 +29,9 @@ class Request extends Client
         } catch (Exception $e) {
             return [
                 'error' => true,
-                'reason' => $e->getMessage()
+                'statusCode' => ($e->getResponse()) ? $e->getResponse()->getStatusCode() : null,
+                'reason' => ($e->getResponse()) ? $e->getResponse()->getReasonPhrase() : null,
+                'message' => $e->getMessage(),
             ];
         }
     }

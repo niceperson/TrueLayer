@@ -2,6 +2,7 @@
 
 namespace Niceperson\Truelayer;
 
+use \Exception;
 use Niceperson\Truelayer\Request;
 use Niceperson\Truelayer\Token;
 use Niceperson\Truelayer\Config;

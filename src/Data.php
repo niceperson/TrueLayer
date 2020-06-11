@@ -2,7 +2,7 @@
 
 namespace Niceperson\Truelayer;
 
-use Exception;
+use \Exception;
 use Niceperson\Truelayer\Request;
 use Niceperson\Truelayer\Token;
 use Niceperson\Truelayer\Config;
@@ -63,8 +63,12 @@ class Data extends Request
      */
     public function setToken(Token $token) : object
     {
-        $this->token = $this->validateToken($token);
-        return $this;
+        if (!$this->tokenIsValid($token)) {
+            $this->token = $this->refreshToken($token);
+        } else {
+            $this->token = $token;
+        }
+        return $this->token;
     }
 
     /**
@@ -74,7 +78,8 @@ class Data extends Request
      */
     public function getEndpoint(string $action, string $account_id) : string
     {
-        return empty($account_id) ? $this->actions[$action] : sprintf($this->actions[$action], $account_id);
+        $endpoint = empty($account_id) ? $this->actions[$action] : sprintf($this->actions[$action], $account_id);
+        return $this->config->getDataPath() . $endpoint;
     }
 
     /**
@@ -96,6 +101,7 @@ class Data extends Request
         $data['headers'] = $this->getAuthHeader();
         $data['query'] = $query;
 
+
         $result = $this->makeRequest($endpoint, $method, $data);
 
         if ($result['error']) {
@@ -108,7 +114,7 @@ class Data extends Request
     /**
      * Validate token existence and handle expired token
      */
-    public function validateToken(Token $token) : Token
+    public function tokenIsValid(Token $token) : bool
     {
         if (is_null($token)) {
             throw new Exception('Token is missing');
@@ -118,9 +124,9 @@ class Data extends Request
             if (!$token->isRefreshable()) {
                 throw new Exception('Sorry token is expired and could not be refreshed');
             }
-
-            return $this->refreshToken($token);
+            return false;
         }
+        return true;
     }
 
     /**
