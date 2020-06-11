@@ -7,11 +7,19 @@ use GuzzleHttp\Client;
 
 class Request extends Client
 {
-    public function makeRequest(string $base, string $endpoint, string $method, array $data = []) : array
+    /**
+     * Make remote HTTP request
+     *
+     * @param string $endpoint Endpoint for request
+     * @param string $method   Method (GET, POST) to use for request
+     * @param array  $data     Data to send (header, body etc)
+     *
+     * @return array
+     */
+    public function makeRequest(string $endpoint, string $method, array $data = []) : array
     {
-
         try {
-            $response = $this->request($method, $base . $endpoint, $data);
+            $response = $this->request($method, $endpoint, $data);
             return [
                 'error' => false,
                 'statusCode' => $response->getStatusCode(),
@@ -21,7 +29,7 @@ class Request extends Client
         } catch (Exception $e) {
             return [
                 'error' => true,
-                'message' => $e->getMessage(),
+                'reason' => $e->getMessage()
             ];
         }
     }

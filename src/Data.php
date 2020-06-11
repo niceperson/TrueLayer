@@ -4,80 +4,149 @@ namespace Niceperson\Truelayer;
 
 use Exception;
 use Niceperson\Truelayer\Request;
+use Niceperson\Truelayer\Token;
+use Niceperson\Truelayer\Config;
 
-class Data
+class Data extends Request
 {
-    const DATA_URI = '/data/v1';
+    protected $config;
+    protected $token;
+    protected $actions = [
+        'META_ME' => '/me',
+        'META_INFO' => '/info',
+        'ACCOUNT_LIST' => '/accounts',
+        'ACCOUNT_VIEW' => '/accounts/%s',
+        'ACCOUNT_BALANCE' => '/accounts/%s/balance',
+        'ACCOUNT_TRANSACTIONS' => '/accounts/%s/transactions',
+        'ACCOUNT_TRANSACTIONS_PENDING' => '/accounts/%s/transactions/pending',
+        'ACCOUNT_DIRECT_DEBITS' => '/accounts/%s/direct_debits',
+        'ACCOUNT_STANDING_ORDER' => '/accounts/%s/standing_orders',
+        'CARD_LIST' => '/cards',
+        'CARD_VIEW' => '/cards/%s',
+        'CARD_BALANCE' => '/cards/%s/balance',
+        'CARD_TRANSACTIONS' => '/cards/%s/transactions',
+        'CARD_TRANSACTIONS_PENDING' => '/cards/%s/transactions/pending',
+    ];
 
-    private $request;
-    private $token;
-    private $actions;
-    private $domain;
-
-    public function __construct(Request $request, Token $token, bool $sandbox = false)
+    /**
+     * Class constructor - set config from parent
+     *
+     * @param array  $option guzzle-client options
+     *
+     * @param object $config truelayer config
+     */
+    public function __construct(array $option, Config $config, Token $token = null)
     {
-        $this->domain = $sandbox ? 'https://api.truelayer-sandbox.com' : 'https://api.truelayer.com';
-        $this->request = $request;
-        $this->token = $token->getAccessToken();
-        $this->actions = [
-            'META_ME' => self::DATA_URI . '/me',
-            'META_INFO' => self::DATA_URI . '/info',
-            'ACCT_LIST' => self::DATA_URI . '/accounts',
-            'ACCT_VIEW' => self::DATA_URI . '/accounts/%s',
-            'ACCT_BALANCE' => self::DATA_URI . '/accounts/%s/balance',
-            'ACCT_TRANSACTIONS' => self::DATA_URI . '/accounts/%s/transactions',
-            'ACCT_TRANSACTIONS_PENDING' => self::DATA_URI . '/accounts/%s/transactions/pending',
-            'ACCT_DIRECT_DEBITS' => self::DATA_URI . '/accounts/%s/direct_debits',
-            'ACCT_STANDING_ORDER' => self::DATA_URI . '/accounts/%s/standing_orders',
-            'CARD_LIST' => self::DATA_URI . '/cards',
-            'CARD_VIEW' => self::DATA_URI . '/cards/%s',
-            'CARD_BALANCE' => self::DATA_URI . '/cards/%s/balance',
-            'CARD_TRANSACTIONS' => self::DATA_URI . '/cards/%s/transactions',
-            'CARD_TRANSACTIONS_PENDING' => self::DATA_URI . '/cards/%s/transactions/pending',
-        ];
+        parent::__construct($option);
+        $this->config = $config;
+        $this->token = $token;
     }
 
-    // Helper function
-    private function getAuthHeader() : array
+    /**
+     * Helper function
+     *
+     * @return array
+     */
+    public function getAuthHeader() : array
     {
         return [
-            'Authorization' => sprintf('Bearer %s', $this->token)
+            'Authorization' => sprintf('Bearer %s', $this->token->getAccessToken())
         ];
     }
 
-    // Helper function
-    private function getEndpoint(string $action, $options) : string
+    /**
+     * Helper function
+     *
+     * @param Token @token - token object
+     *
+     * @return object
+     */
+    public function setToken(Token $token) : object
     {
-
-        if (empty($options)) {
-            $endpoint = $this->actions[$action];
-        } elseif (sizeof($options) === 3 ) {
-            // both from and to must present else range will be omitted
-            $endpoint = sprintf($this->actions[$action] . '?from=$s&to=$s', ...$options);
-        } else {
-            // only supply the account_id
-            $endpoint =  sprintf($this->actions[$action], ...$options);
-        }
-
-        return $endpoint;
+        $this->token = $this->validateToken($token);
+        return $this;
     }
 
-    // Perfrom request
-    public function fetch(string $action, ...$options) : array
+    /**
+     * Helper function
+     *
+     * @return string
+     */
+    public function getEndpoint(string $action, string $account_id) : string
     {
-        $base = $this->domain;
+        return empty($account_id) ? $this->actions[$action] : sprintf($this->actions[$action], $account_id);
+    }
+
+    /**
+     * Perform request
+     *
+     * @param string $action action preset index
+     * @param array  $option account_id / from / to
+     */
+    public function fetch(string $action, array $options = []) : array
+    {
+        $account_id = isset($options['account_id']) ? $options['account_id'] : '';
+        $query = array_filter([
+            'from' => isset($options['from']) ? $options['from'] : null,
+            'to' => isset($options['to']) ? $options['to'] : null,
+        ]);
+
         $method = 'GET';
-        $endpoint = $this->getEndpoint($action, $options);
-        $data = [
-            'headers' => $this->getAuthHeader()
-        ];
+        $endpoint = $this->getEndpoint($action, $account_id);
+        $data['headers'] = $this->getAuthHeader();
+        $data['query'] = $query;
 
-        $result = $this->request->makeRequest($base, $endpoint, $method, $data);
+        $result = $this->makeRequest($endpoint, $method, $data);
 
         if ($result['error']) {
-            throw new Exception($result['message']);
+            throw new Exception($result['reason']);
         }
 
         return (sizeof($result['body']['results']) === 1) ? current($result['body']['results']) : $result['body']['results'];
+    }
+
+    /**
+     * Validate token existence and handle expired token
+     */
+    public function validateToken(Token $token) : Token
+    {
+        if (is_null($token)) {
+            throw new Exception('Token is missing');
+        }
+
+        if ($token->isExpired()) {
+            if (!$token->isRefreshable()) {
+                throw new Exception('Sorry token is expired and could not be refreshed');
+            }
+
+            return $this->refreshToken($token);
+        }
+    }
+
+    /**
+     * Perform token refresh
+     */
+    public function refreshToken(Token $token) : Token
+    {
+        $grant = 'refresh_token';
+        $method = 'POST';
+        $endpoint = $this->config->getAuthPath() . '/connect/token';
+        $data = [
+            'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
+            'form_params' => [
+                'grant_type' => $grant,
+                'client_id' => $this->config->getClientId(),
+                'client_secret' => $this->config->getClientSecret(),
+                'refresh_token' => $token->getRefreshToken()
+            ]
+        ];
+
+        $result =  $this->makeRequest($endpoint, $method, $data);
+
+        if ($result['error']) {
+            throw new Exception('Refreshing token failed');
+        }
+
+        return new Token($result['body']);
     }
 }

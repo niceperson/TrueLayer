@@ -2,123 +2,132 @@
 
 namespace Niceperson\Truelayer;
 
-use Exception;
+use Niceperson\Truelayer\Request;
 use Niceperson\Truelayer\Token;
+use Niceperson\Truelayer\Config;
 
-class Authorization
+class Authorization extends Request
 {
-    protected $request;
-    protected $credentials;
-    protected $domain;
+    protected $config;
 
-    public function __construct(Request $request, Credentials $credentials, bool $sandbox = false)
+    /**
+     * Class constructor - set config from parent
+     *
+     * @param array  $option guzzle-client options
+     *
+     * @param object $config truelayer config
+     */
+    public function __construct(array $option, Config $config)
     {
-        $this->domain = $sandbox ? 'https://auth.truelayer-sandbox.com' : 'https://auth.truelayer.com';
-        $this->request = $request;
-        $this->credentials = $credentials;
+        parent::__construct($option);
+        $this->config = $config;
     }
 
-    public function getAuthLink(string $format = '') : string
+    /**
+     * Generates auth link
+     *
+     * @return string
+     */
+    public function generateAuthUrl() : string
     {
-        if (empty($format)) {
-            $format = "%s/?response_type=code&client_id=%s&scope=%s&redirect_uri=%s&response_mode=form_post&providers=%s";
-        }
+        $format = "%s/?response_type=code&client_id=%s&redirect_uri=%s&response_mode=form_post&scope=%s&providers=%s";
 
         $auth_link = sprintf(
             $format,
-            $this->domain,
-            $this->credentials->getClientId(),
-            $this->credentials->getScope(),
-            $this->credentials->getRedirectUri(),
-            $this->credentials->getProviders()
+            $this->config->getAuthPath(),
+            $this->config->getClientId(),
+            $this->config->getRedirectUri(),
+            $this->getScopes(),
+            $this->getProviders()
         );
 
         return $auth_link;
     }
 
-    public function getAccessToken(string $code) : Token
+    /**
+     * Request token from code
+     *
+     * @param string $code code from truelayer
+     *
+     * @return object
+     */
+    public function requestOauthToken(string $code) : Token
     {
-        $base = $this->domain;
         $grant = 'authorization_code';
         $method = 'POST';
-        $endpoint = '/connect/token';
-
-        $result = $this->request->makeRequest(
-            $base,
-            $endpoint,
-            $method,
-            [
-                'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
-                'form_params' => [
-                    'grant_type' => $grant,
-                    'client_id' => $this->credentials->getClientId(),
-                    'client_secret' => $this->credentials->getClientSecret(),
-                    'redirect_uri' => $this->credentials->getRedirectUri(),
-                    'code' => $code
-                ]
+        $endpoint = $this->config->getAuthPath() . '/connect/token';
+        $data = [
+            'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
+            'form_params' => [
+                'grant_type' => $grant,
+                'client_id' => $this->config->getClientId(),
+                'client_secret' => $this->config->getClientSecret(),
+                'redirect_uri' => $this->config->getRedirectUri(),
+                'code' => $code
             ]
-        );
+        ];
+
+        $result = $this->makeRequest($endpoint, $method, $data);
 
         if ($result['error']) {
-            throw new Exception('Ooopps! we could not fetch token from the code');
+            throw new Exception('Unable to fetch token from code');
         }
 
         return new Token($result['body']);
-
     }
 
-    public function refreshAccessToken(string $refresh_token) : Token
+    /**
+     * Request truelayer revoke access
+     *
+     * @param string $access_token access_token to be revoked
+     *
+     * @return array
+     */
+    public function requestRevokeToken(string $access_token) : array
     {
-        $base = $this->domain;
-        $grant = 'refresh_token';
-        $method = 'POST';
-        $endpoint = '/connect/token';
-
-        $result =  $this->request->makeRequest(
-            $base,
-            $endpoint,
-            $method,
-            [
-                'headers' => ['Content-Type' => 'application/x-www-form-urlencoded'],
-                'form_params' => [
-                    'grant_type' => $grant,
-                    'client_id' => $this->credentials->getClientId(),
-                    'client_secret' => $this->credentials->getClientSecret(),
-                    'refresh_token' => $refresh_token
-                ]
-            ]
-        );
-
-        if ($result['error']) {
-            throw new Exception('Ooopps! we could not fetch token from the code');
-        }
-
-        return new Token($result['body']);
-
-    }
-
-    public function revokeAccessToken(string $access_token) : array
-    {
-        $base = $this->domain;
         $method = 'DELETE';
-        $endpoint = '/api/delete';
+        $endpoint = $this->config->getAuthPath() . '/api/delete';
+        $data = [
+            'headers' => ['Authorization' => sprintf('Bearer %s', $access_token)]
+        ];
 
-        return $this->request->makeRequest(
-            $base,
-            $endpoint,
-            $method,
-            [
-                'headers' => ['Authorization' => sprintf('Bearer %s', $access_token)]
-            ]
-        );
+        return $this->makeRequest($endpoint, $method, $data);
     }
 
-    public function providers() : array
+    /**
+     * Generates providers string
+     *
+     * @return string
+     */
+    public function getProviders() : string
     {
-        $base = $this->domain;
-        $method = 'GET';
-        $endpoint = '/api/providers';
+        $providers = ['uk-ob-all', 'uk-oauth-all'];
 
-        return $this->request->makeRequest($base, $endpoint, $method);
+        if ($this->config->getIsSandbox()) {
+            array_push($providers, 'uk-cs-mock');
+        }
+
+        return implode('%20', $providers);
+    }
+
+    /**
+     * Generates scopes string
+     *
+     * @return string
+     */
+    public function getScopes() : string
+    {
+        $scopes = [
+            'info',
+            'accounts',
+            'balance',
+            'cards',
+            'transactions',
+            'direct_debits',
+            'standing_orders',
+            'offline_access'
+        ];
+
+        return implode('%20', $scopes);
     }
 }

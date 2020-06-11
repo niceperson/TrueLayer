@@ -24,17 +24,25 @@ class Token
         $this->issued_at = ( isset($token['issued_at']) ) ? new DateTime($token['issued_at']) : new DateTime();
     }
 
-
+    /**
+     * Helper function - retrieve access_token
+     */
     public function getAccessToken() : string
     {
         return $this->access_token;
     }
 
+    /**
+     * Helper function - retrieve refresh_token
+     */
     public function getRefreshToken() : string
     {
         return $this->refresh_token;
     }
 
+    /**
+     * Helper function - check if token has expired
+     */
     public function isExpired() : bool
     {
         $interval = new DateInterval("PT" . $this->expires_in . "S");
@@ -43,7 +51,20 @@ class Token
         return $expires < (new DateTime);
     }
 
-    public function getDBField() : array
+    /**
+     * Helper function - check if token is refreshable
+     */
+    public function isRefreshable() : bool
+    {
+        return (bool) $this->access_token;
+    }
+
+    /**
+     * Return the token field as key value
+     *
+     * @return array
+     */
+    public function getAllField() : array
     {
         return [
             'access_token' => $this->access_token,
@@ -54,5 +75,4 @@ class Token
             'scope' => $this->scope,
         ];
     }
-
 }
