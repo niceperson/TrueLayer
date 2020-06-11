@@ -19,7 +19,7 @@ $credentials = new Credentials(
     TRUELAYER_CLIENT_ID,
     TRUELAYER_CLIENT_SECRET,
     TRUELAYER_REDIRECT_URI,
-    TRUELAYER_USE_SANDBOX,  // this will add mock provider wehn generation auth link
+    TRUELAYER_USE_SANDBOX,  // this will add mock provider when generatingn auth link
 );
 
 $truelayer_request = new Request(['timeout' => 60]); // options as per Guzzle client
@@ -52,4 +52,12 @@ $result = $data->fetch('ACCT_TRANSACTIONS_PENDING', $account_id);
 $result = $data->fetch('CARD_TRANSACTIONS_PENDING', $account_id);
 $result = $data->fetch('ACCT_DIRECT_DEBITS', $account_id);
 $result = $data->fetch('ACCT_STANDING_ORDER', $account_id);
+
+//------------------------------------------------------------| Payment requests
+
+
+/*          PAYMENT is NOT Completed yet. will be done in next release        */
+
 ```
+
+### Payment is in progress
