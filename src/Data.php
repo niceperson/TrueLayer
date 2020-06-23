@@ -153,6 +153,9 @@ class Data extends Request
             throw new Exception('Refreshing token failed');
         }
 
+        // append current scope
+        $result['body']['scope'] = $token->getScope();
+
         return new Token($result['body']);
     }
 }

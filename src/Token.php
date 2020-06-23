@@ -41,6 +41,14 @@ class Token
     }
 
     /**
+     * Helper function - retrieve scope
+     */
+    public function getScope() : string
+    {
+        return $this->scope;
+    }
+
+    /**
      * Helper function - check if token has expired
      */
     public function isExpired() : bool
