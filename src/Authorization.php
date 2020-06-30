@@ -38,7 +38,7 @@ class Authorization extends Request
             $this->config->getAuthPath(),
             $this->config->getClientId(),
             $this->config->getRedirectUri(),
-            $this->getScopes(),
+            $this->getInitAllScopes(),
             $this->getProviders()
         );
 
@@ -69,10 +69,6 @@ class Authorization extends Request
         ];
 
         $result = $this->makeRequest($endpoint, $method, $data);
-
-        if ($result['error']) {
-            throw new Exception('Unable to fetch token from code');
-        }
 
         return new Token($result['body']);
     }
@@ -116,7 +112,7 @@ class Authorization extends Request
      *
      * @return string
      */
-    public function getScopes() : string
+    public function getInitAllScopes() : string
     {
         $scopes = [
             'info',

@@ -49,6 +49,15 @@ class Token
     }
 
     /**
+     * set scope
+     */
+    public function setScope(string $scope) : object
+    {
+        $this->scope = $scope;
+        return $this;
+    }
+
+    /**
      * Helper function - check if token has expired
      */
     public function isExpired() : bool

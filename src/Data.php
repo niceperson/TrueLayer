@@ -104,10 +104,6 @@ class Data extends Request
 
         $result = $this->makeRequest($endpoint, $method, $data);
 
-        if ($result['error']) {
-            throw new Exception($result['reason']);
-        }
-
         return (sizeof($result['body']['results']) === 1) ? current($result['body']['results']) : $result['body']['results'];
     }
 
@@ -149,13 +145,11 @@ class Data extends Request
 
         $result =  $this->makeRequest($endpoint, $method, $data);
 
-        if ($result['error']) {
-            throw new Exception('Refreshing token failed');
-        }
+        $this->token = new Token($result['body']);
 
-        // append current scope
-        $result['body']['scope'] = $token->getScope();
+        // overwrite scope form meta
+        $me = $this->fetch('META_ME');
 
-        return new Token($result['body']);
+        return $this->token->setScope(implode(' ', $me['scopes']));
     }
 }

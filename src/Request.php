@@ -21,18 +21,12 @@ class Request extends Client
         try {
             $response = $this->request($method, $endpoint, $data);
             return [
-                'error' => false,
                 'statusCode' => $response->getStatusCode(),
                 'reason' => $response->getReasonPhrase(),
                 'body' => json_decode($response->getBody(), true)
             ];
         } catch (Exception $e) {
-            return [
-                'error' => true,
-                'statusCode' => ($e->getResponse()) ? $e->getResponse()->getStatusCode() : null,
-                'reason' => ($e->getResponse()) ? $e->getResponse()->getReasonPhrase() : null,
-                'message' => $e->getMessage(),
-            ];
+            throw new Exception(json_decode($e->getResponse()->getBody()->getContents(), true)['error']);
         }
     }
 }
