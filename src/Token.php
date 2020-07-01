@@ -20,7 +20,7 @@ class Token
         $this->expires_in = $token['expires_in'];
         $this->token_type = $token['token_type'];
         $this->refresh_token = $token['refresh_token'];
-        $this->scope = $token['scope'];
+        $this->scope = $token['scope'] ?? '';
         $this->issued_at = ( isset($token['issued_at']) ) ? new DateTime($token['issued_at']) : new DateTime();
     }
 
