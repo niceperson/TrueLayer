@@ -104,7 +104,7 @@ class Data extends Request
 
         $result = $this->makeRequest($endpoint, $method, $data);
 
-        return (sizeof($result['body']['results']) === 1) ? current($result['body']['results']) : $result['body']['results'];
+        return $result['body']['results'];
     }
 
     /**
