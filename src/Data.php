@@ -148,12 +148,8 @@ class Data extends Request
         $this->token = new Token($result['body']);
 
         // overwrite scope form meta
-        $me = $this->fetch('META_ME');
+        $me = $this->fetch('META_ME')[0];
 
-        if (isset($me['scopes'])) {
-            return $this->token->setScope(implode(' ', $scopes));
-        }
-
-        return $this->token;
+        return $this->token->setScope(implode(' ', $me['scopes']));
     }
 }
